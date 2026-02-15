@@ -1,13 +1,13 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle } from "drizzle-orm/libsql";
+import { createClient } from "@libsql/client";
 import * as schema from "./schema";
 import bcrypt from "bcryptjs";
-import path from "path";
 
-const dbPath = path.join(process.cwd(), "sqlite.db");
-const sqlite = new Database(dbPath);
-sqlite.pragma("journal_mode = WAL");
-const db = drizzle(sqlite, { schema });
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
+const db = drizzle(client, { schema });
 
 async function seed() {
   console.log("Seeding database...");
@@ -17,14 +17,13 @@ async function seed() {
     process.env.ADMIN_PASSWORD || "changeme123",
     12
   );
-  db.insert(schema.adminUsers)
+  await db.insert(schema.adminUsers)
     .values({
       email: process.env.ADMIN_EMAIL || "admin@bisouestudio.com",
       passwordHash,
       name: "Admin",
     })
-    .onConflictDoNothing()
-    .run();
+    .onConflictDoNothing();
   console.log("Admin user created");
 
   // Create categories
@@ -37,7 +36,7 @@ async function seed() {
   ];
 
   for (const cat of categoryData) {
-    db.insert(schema.categories).values(cat).onConflictDoNothing().run();
+    await db.insert(schema.categories).values(cat).onConflictDoNothing();
   }
   console.log("Categories created");
 
@@ -120,7 +119,7 @@ async function seed() {
   ];
 
   for (const prod of productData) {
-    db.insert(schema.products).values(prod).onConflictDoNothing().run();
+    await db.insert(schema.products).values(prod).onConflictDoNothing();
   }
   console.log("Products created");
 
@@ -137,7 +136,7 @@ async function seed() {
   ];
 
   for (const img of imageData) {
-    db.insert(schema.productImages).values(img).onConflictDoNothing().run();
+    await db.insert(schema.productImages).values(img).onConflictDoNothing();
   }
   console.log("Product images created");
 
@@ -146,21 +145,19 @@ async function seed() {
   for (let productId = 1; productId <= 8; productId++) {
     const productSizes = productId === 5 ? ["One Size"] : sizes;
     for (const size of productSizes) {
-      db.insert(schema.productVariants)
+      await db.insert(schema.productVariants)
         .values({
           productId,
           size,
           stock: Math.floor(Math.random() * 15) + 2,
           sku: `BST-${String(productId).padStart(3, "0")}-${size}`,
         })
-        .onConflictDoNothing()
-        .run();
+        .onConflictDoNothing();
     }
   }
   console.log("Product variants created");
 
   console.log("Seed complete!");
-  sqlite.close();
 }
 
 seed().catch(console.error);

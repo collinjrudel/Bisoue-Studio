@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { db } from "@/lib/db";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import ProductForm from "@/components/admin/ProductForm";
